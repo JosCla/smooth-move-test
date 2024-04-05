@@ -8,6 +8,8 @@ public delegate (Vector2, Vector2) PosVelModifier(Vector2 position, Vector2 velo
 
 public class Game1 : Game
 {
+    public static readonly float APPLE_SIZE = 50.0f;
+
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
 
@@ -29,10 +31,11 @@ public class Game1 : Game
 
     protected override void Initialize()
     {
-        position = new Vector2(0.0f, 0.0f);
-        velocity = new Vector2(0.0f, 0.0f);
+        position = new Vector2(APPLE_SIZE / 2.0f);
+        velocity = Vector2.Zero;
 
-        targetPosition = new Vector2(100.0f, 100.0f);
+        targetPosition = new Vector2(APPLE_SIZE);
+
         currModifier = Modifier0;
 
         base.Initialize();
@@ -50,7 +53,17 @@ public class Game1 : Game
         GraphicsDevice.Clear(Color.CornflowerBlue);
 
         _spriteBatch.Begin();
-        _spriteBatch.Draw(appleTexture, position, Color.White);
+        _spriteBatch.Draw(
+            appleTexture,
+            position,
+            null,
+            Color.White,
+            0.0f,
+            new Vector2(appleTexture.Width / 2.0f, appleTexture.Height / 2.0f),
+            new Vector2(APPLE_SIZE / appleTexture.Width, APPLE_SIZE / appleTexture.Height),
+            SpriteEffects.None,
+            0.0f
+        );
         _spriteBatch.End();
 
         base.Draw(gameTime);
@@ -96,7 +109,7 @@ public class Game1 : Game
     // velocity points to target, and speed is proportional to distance
     private (Vector2, Vector2) Modifier1(Vector2 position, Vector2 velocity, Vector2 targetPosition, float timeElapsed)
     {
-        velocity = (targetPosition - position) * 2.0f;
+        velocity = (targetPosition - position) * 5.0f;
         position += (velocity * timeElapsed);
 
         return (position, velocity);
