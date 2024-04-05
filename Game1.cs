@@ -36,7 +36,7 @@ public class Game1 : Game
 
         targetPosition = new Vector2(APPLE_SIZE);
 
-        currModifier = Modifier0;
+        currModifier = Modifier4;
 
         base.Initialize();
     }
