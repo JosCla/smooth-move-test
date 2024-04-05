@@ -168,9 +168,11 @@ public class Game1 : Game
         }
 
         // step 3: find vector rejection of velocity and target vector, and dampen it a bit
-        Vector2 projection = (Vector2.Dot(velocity, target) / Vector2.Dot(target, target)) * target;
-        Vector2 rejection = velocity - projection;
-        velocity = projection + (0.8f * rejection);
+        if (speed > 0.0f) {
+            Vector2 projection = (Vector2.Dot(velocity, target) / Vector2.Dot(target, target)) * target;
+            Vector2 rejection = velocity - projection;
+            velocity = projection + (0.85f * rejection);
+        }
 
         // step 4: add velocity to position
         position += (velocity * timeElapsed);
