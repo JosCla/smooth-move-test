@@ -1,0 +1,8 @@
+.vscode
+.vs
+.sln
+[Bb]in
+[Dd]ebug*/
+[Rr]elease*/
+obj/
+**/.mgstats
