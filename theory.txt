@@ -1,0 +1,167 @@
+trying to figure out a nicer camera control scheme for threadbound
+
+
+
+current approach: logistic curve
+
+right now we're using logistic curves to move the camera. define a start
+position and an end position, and you can move smoothly between them.
+looks like:
+
+ y
+ ^
+1|           .....  
+ |         ..       
+ |        .         
+ |        .         
+ |      ..          
+0| .....            
+ .---------------->x
+  0              1
+
+and the equation:
+y = 1 / (1 + e^(-K * (x - 0.5)))
+for some "speed constant" K
+
+it's nice because you get continuity in position, velocity, and acceleration.
+so it feels very smooth!
+
+but you need to know your start position through the whole curve, which is
+annoying in code! furthermore, it's not flexible if you suddenly need to do
+*another* camera shift, in which case you'll "reset" to the start of the
+logistic curve and get a huge velocity change. it's a bit jarring.
+
+my main goal is to get this smooth logistic curve movement without having to
+track an explicit start position, or progress along a logistic curve. i'd like
+it if our camera movement was moreso defined by some differential equations
+dependent only upon the current position/velocity, and target position.
+
+
+
+approach 0: teleportation
+
+the most basic approach is to just teleport the camera. then we definitely
+don't need to know the start position!
+
+but i think i can do a bit better than sudden, static jumps.
+
+
+
+approach 1: velocity relative to distance
+
+here's a simple but pretty effective idea.
+velocity = (targetPosition - currentPosition) * speedFactor
+
+it produces this curve:
+
+^
+|       .........
+|    ...         
+|  ..            
+| .              
+|.               
+|.               
+.---------------->
+
+we don't need to know the start position, and the movement is generally smooth.
+
+that immediate jerk at the start is really rough, though. very noticeable to
+the human eye when we see that sort of velocity change
+
+i do use this for expanding/contracting things like buttons and dialogue
+portraits, though. since it's not moving the whole screen, it's suitable, and
+pretty simple to implement.
+
+
+
+approach 2: do acceleration instead!
+
+perhaps we can get rid of the visible aberration at the start by applying that
+same equation to the acceleration instead?
+acceleration = (targetPosition - currentPosition) * speedFactor
+
+we then overshoot:
+
+           .
+          .
+         .
+^        .
+|       .        
+|       .        
+|      .         
+|     .          
+|   ..           
+|...             
+.---------------->
+
+we actually repeatedly overshoot, though it's not shown in the above graph.
+
+
+
+approach 3: speed limit
+
+so my first thought was: apply a speed limit relative to distance! your speed
+limit would look something like:
+
+(horiz. axis is distance, vert. axis is speed)
+
+^
+| .              
+| .              
+| .              
+|  .             
+|   ..           
+|     .....      
+.---------------->
+
+and at that point, you get what looks like a really nice logistic curve! it
+speeds up to cover distance, and then slows down as it gets close. phenomenal!
+
+^
+|           .....  
+|         ..       
+|        .         
+|        .         
+|      ..          
+| .....            
+.---------------->
+
+it's not continuous on acceleration. the camera person's bones are undoubtedly
+breaking when they hit the speed limit. but it's continuous on position and
+velocity, which looks good to the human eye
+
+but there's a big caveat: it doesn't work in higher dimensions. you easily get
+into situations where you orbit, and never stabilize. the position never gets
+close enough to the target for the speed limit to do its job!
+
+
+
+approach 4: dampen the bad directions
+
+orbits are caused by excess velocity pointing perpendicular to your target
+vector. so let's do a little vector math to dampen that
+
+if we have some vector pointing at the target, and the current velocity vector,
+we can divide the velocity into two parts:
+- the part in-line with the target vector (the vector projection)
+- the part perpendicular to the target vector (the vector rejection)
+
+orbiting is caused by the vector rejection component. so each frame i dampen
+that component by 20%.
+
+that works pretty well, actually. it's a very flexible camera system that
+doesn't start too fast, slows as it approaches the target, and will converge on
+the target.
+
+
+
+empty graph for future use:
+
+^
+|                
+|                
+|                
+|                
+|                
+|                
+.---------------->
