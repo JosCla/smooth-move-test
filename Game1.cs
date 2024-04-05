@@ -4,6 +4,8 @@ using Microsoft.Xna.Framework.Input;
 
 namespace SmoothMoveTest;
 
+public delegate (Vector2, Vector2) PosVelModifier(Vector2 position, Vector2 velocity, Vector2 targetPosition, float timeElapsed);
+
 public class Game1 : Game
 {
     private GraphicsDeviceManager _graphics;
@@ -15,6 +17,8 @@ public class Game1 : Game
     private Vector2 targetPosition;
 
     private Texture2D appleTexture;
+
+    private PosVelModifier currModifier;
 
     public Game1()
     {
@@ -29,6 +33,7 @@ public class Game1 : Game
         velocity = new Vector2(0.0f, 0.0f);
 
         targetPosition = new Vector2(100.0f, 100.0f);
+        currModifier = Modifier0;
 
         base.Initialize();
     }
@@ -40,10 +45,34 @@ public class Game1 : Game
         appleTexture = this.Content.Load<Texture2D>("apple");
     }
 
+    protected override void Draw(GameTime gameTime)
+    {
+        GraphicsDevice.Clear(Color.CornflowerBlue);
+
+        _spriteBatch.Begin();
+        _spriteBatch.Draw(appleTexture, position, Color.White);
+        _spriteBatch.End();
+
+        base.Draw(gameTime);
+    }
+
     protected override void Update(GameTime gameTime)
     {
         if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
             Exit();
+
+        // changing mode
+        if (Keyboard.GetState().IsKeyDown(Keys.D0)) {
+            currModifier = Modifier0;
+        } else if (Keyboard.GetState().IsKeyDown(Keys.D1)) {
+            currModifier = Modifier1;
+        } else if (Keyboard.GetState().IsKeyDown(Keys.D2)) {
+            currModifier = Modifier2;
+        } else if (Keyboard.GetState().IsKeyDown(Keys.D3)) {
+            currModifier = Modifier3;
+        } else if (Keyboard.GetState().IsKeyDown(Keys.D4)) {
+            currModifier = Modifier4;
+        }
 
         // updating target pos
         if (Mouse.GetState().LeftButton == ButtonState.Pressed) {
@@ -52,13 +81,42 @@ public class Game1 : Game
         }
 
         // moving toward target pos
-        (position, velocity) = PosUpdate2(position, velocity, targetPosition, (float)gameTime.ElapsedGameTime.TotalSeconds);
+        float timeElapsed = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        (position, velocity) = currModifier(position, velocity, targetPosition, timeElapsed);
 
         base.Update(gameTime);
     }
 
-    // acceleration with "speed limit" approach
-    private (Vector2, Vector2) PosUpdate1(Vector2 position, Vector2 velocity, Vector2 targetPosition, float timeElapsed)
+    // will just "teleport" your position to the target
+    private (Vector2, Vector2) Modifier0(Vector2 position, Vector2 velocity, Vector2 targetPosition, float timeElapsed)
+    {
+        return (targetPosition, Vector2.Zero);
+    }
+
+    // velocity points to target, and speed is proportional to distance
+    private (Vector2, Vector2) Modifier1(Vector2 position, Vector2 velocity, Vector2 targetPosition, float timeElapsed)
+    {
+        velocity = (targetPosition - position) * 2.0f;
+        position += (velocity * timeElapsed);
+
+        return (position, velocity);
+    }
+
+    // acceleration points to target with magnitude proportional to distance
+    private (Vector2, Vector2) Modifier2(Vector2 position, Vector2 velocity, Vector2 targetPosition, float timeElapsed)
+    {
+        // step 1: acceleration is relative to distance to target
+        Vector2 acceleration = (targetPosition - position) * 10.0f;
+        velocity += (acceleration * timeElapsed);
+
+        // step 2: add velocity to position
+        position += (velocity * timeElapsed);
+
+        return (position, velocity);
+    }
+
+    // same as last, but with added speed limit
+    private (Vector2, Vector2) Modifier3(Vector2 position, Vector2 velocity, Vector2 targetPosition, float timeElapsed)
     {
         // step 1: acceleration is relative to distance to target
         Vector2 acceleration = (targetPosition - position) * 10.0f;
@@ -68,7 +126,7 @@ public class Game1 : Game
         float distance = (targetPosition - position).Length();
         float speed = velocity.Length();
         float maxSpeed = distance * 10.0f;
-        if (speed >= maxSpeed) {
+        if (speed >= maxSpeed && speed > 0.0f) {
             velocity.Normalize();
             velocity *= maxSpeed;
         }
@@ -79,8 +137,8 @@ public class Game1 : Game
         return (position, velocity);
     }
 
-    // speed limit plus dampen vector rejection
-    private (Vector2, Vector2) PosUpdate2(Vector2 position, Vector2 velocity, Vector2 targetPosition, float timeElapsed)
+    // same as last, but with added target rejection dampening
+    private (Vector2, Vector2) Modifier4(Vector2 position, Vector2 velocity, Vector2 targetPosition, float timeElapsed)
     {
         // step 1: acceleration is relative to distance to target
         Vector2 target = targetPosition - position;
@@ -91,7 +149,7 @@ public class Game1 : Game
         float distance = target.Length();
         float speed = velocity.Length();
         float maxSpeed = distance * 10.0f;
-        if (speed >= maxSpeed) {
+        if (speed >= maxSpeed && speed > 0.0f) {
             velocity.Normalize();
             velocity *= maxSpeed;
         }
@@ -105,16 +163,5 @@ public class Game1 : Game
         position += (velocity * timeElapsed);
 
         return (position, velocity);
-    }
-
-    protected override void Draw(GameTime gameTime)
-    {
-        GraphicsDevice.Clear(Color.CornflowerBlue);
-
-        _spriteBatch.Begin();
-        _spriteBatch.Draw(appleTexture, position, Color.White);
-        _spriteBatch.End();
-
-        base.Draw(gameTime);
     }
 }
